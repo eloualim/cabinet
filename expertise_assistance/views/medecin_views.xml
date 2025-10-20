@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Vue formulaire propre pour les médecins -->
+        <record id="view_medecin_form" model="ir.ui.view">
+            <field name="name">medecin.form</field>
+            <field name="model">medecin</field>
+            <field name="arch" type="xml">
+                <form string="Médecin">
+                    <sheet>
+                        <group>
+                            <group>
+                                <field name="name" string="Nom du médecin"/>
+                                <field name="arabic_name" placeholder="الاسم بالعربية"/>
+                            </group>
+                            <group>
+                                <field name="phone"/>
+                                <field name="mobile"/>
+                                <field name="email"/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page name="contact_addresses" string="Contacts &amp; Adresses">
+                                <group>
+                                    <group string="Adresse">
+                                        <field name="street" placeholder="Rue..."/>
+                                        <field name="street2"/>
+                                        <field name="zip" placeholder="Code postal"/>
+                                        <field name="city" placeholder="Ville"/>
+                                        <field name="state_id"/>
+                                        <field name="country_id"/>
+                                    </group>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Vue liste propre pour les médecins -->
+        <record id="view_medecin_list" model="ir.ui.view">
+            <field name="name">medecin.list</field>
+            <field name="model">medecin</field>
+            <field name="arch" type="xml">
+                <list string="Médecins">
+                    <field name="name"/>
+                    <field name="arabic_name"/>
+                    <field name="city"/>
+                    <field name="phone"/>
+                    <field name="mobile"/>
+                    <field name="email"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- Vue recherche propre pour les médecins -->
+        <record id="view_medecin_search" model="ir.ui.view">
+            <field name="name">medecin.search</field>
+            <field name="model">medecin</field>
+            <field name="arch" type="xml">
+                <search string="Rechercher Médecins">
+                    <field name="name" string="Nom"/>
+                    <field name="arabic_name" string="Nom Arabe"/>
+                    <field name="city" string="Ville"/>
+                    <field name="phone" string="Téléphone"/>
+                    <separator/>
+
+                    <group expand="0" string="Grouper par">
+                        <filter string="Ville" name="group_city" domain="[]" context="{'group_by': 'city'}"/>
+                        <filter string="Pays" name="group_country" domain="[]" context="{'group_by': 'country_id'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+        <!-- Action pour les médecins -->
+        <record id="action_medecin" model="ir.actions.act_window">
+            <field name="name">Médecins</field>
+            <field name="res_model">medecin</field>
+            <field name="view_mode">list,form</field>
+            <field name="domain">[]</field>
+            <field name="context">{}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Ajouter un nouveau médecin
+                </p>
+                <p>
+                    Gérez vos médecins avec leurs informations :
+                    nom français et nom arabe.
+                </p>
+            </field>
+        </record>
+
+        <!-- Élément de menu pour médecins -->
+        <menuitem id="menu_medecins"
+                  name="Médecins"
+                  parent="menu_insurance_companies_root"
+                  action="action_medecin"
+                  sequence="20"/>
+
+    </data>
+</odoo>

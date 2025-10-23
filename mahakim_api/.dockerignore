@@ -1,0 +1,6 @@
+__pycache__
+*.pyc
+.env
+.git
+find_keys_network.py
+functions.py

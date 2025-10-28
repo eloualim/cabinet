@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue Liste pour Ville -->
+    <record id="view_ville_tree" model="ir.ui.view">
+        <field name="name">ville.tree</field>
+        <field name="model">ville</field>
+        <field name="arch" type="xml">
+            <list string="Villes">
+                <field name="name"/>
+                <field name="ar_name"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue Formulaire pour Ville -->
+    <record id="view_ville_form" model="ir.ui.view">
+        <field name="name">ville.form</field>
+        <field name="model">ville</field>
+        <field name="arch" type="xml">
+            <form string="Ville">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <widget name="web_ribbon" title="Archivé" bg_color="bg-danger" invisible="active"/>
+                    </div>
+                    
+                    <group>
+                        <group string="Informations Générales">
+                            <field name="name"/>
+                            <field name="ar_name"/>
+                        </group>
+                        <group string="État">
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue Recherche pour Ville -->
+    <record id="view_ville_search" model="ir.ui.view">
+        <field name="name">ville.search</field>
+        <field name="model">ville</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher Villes">
+                <field name="name"/>
+                <field name="ar_name"/>
+                <separator/>
+                <filter string="Archivées" name="inactive" domain="[('active','=',False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action pour Ville -->
+    <record id="action_ville" model="ir.actions.act_window">
+        <field name="name">Villes</field>
+        <field name="res_model">ville</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créer une nouvelle ville
+            </p>
+            <p>
+                Gérez les villes pour votre système.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu pour Ville -->
+    <menuitem id="menu_ville"
+              name="Villes"
+              parent="menu_configuration"
+              action="action_ville"
+              sequence="50"/>
+
+</odoo>

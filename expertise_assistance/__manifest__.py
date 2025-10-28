@@ -23,9 +23,13 @@
     # always loaded
     'data': [
         'security/ir.model.access.csv',
+        'views/menus.xml',
+        'views/expertise_assistance_views.xml',
         'views/insurance_company_views.xml',
         'views/medecin_views.xml',
         'views/avocat_views.xml',
+        'views/tribunal_views.xml',
+        'views/ville_views.xml',
     ],
     # only loaded in demonstration mode
     'demo': [

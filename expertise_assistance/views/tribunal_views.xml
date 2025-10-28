@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vue Liste pour Tribunal -->
+    <record id="view_tribunal_tree" model="ir.ui.view">
+        <field name="name">tribunal.tree</field>
+        <field name="model">tribunal</field>
+        <field name="arch" type="xml">
+            <list string="Tribunaux">
+                <field name="name"/>
+                <field name="ar_name"/>
+                <field name="ville_id"/>
+                <field name="idJuridiction"/>
+                <field name="parent_id"/>
+                <field name="CA" widget="boolean_toggle"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue Formulaire pour Tribunal -->
+    <record id="view_tribunal_form" model="ir.ui.view">
+        <field name="name">tribunal.form</field>
+        <field name="model">tribunal</field>
+        <field name="arch" type="xml">
+            <form string="Tribunal">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <widget name="web_ribbon" title="Archivé" bg_color="bg-danger" invisible="active"/>
+                    </div>
+                    
+                    <group>
+                        <group string="Informations Générales">
+                            <field name="name"/>
+                            <field name="ar_name"/>
+                            <field name="ville_id"/>
+                            <field name="idJuridiction"/>
+                        </group>
+                        <group string="Classification">
+                            <field name="parent_id"/>
+                            <field name="CA"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue Recherche pour Tribunal -->
+    <record id="view_tribunal_search" model="ir.ui.view">
+        <field name="name">tribunal.search</field>
+        <field name="model">tribunal</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher Tribunaux">
+                <field name="name"/>
+                <field name="ar_name"/>
+                <field name="ville_id"/>
+                <field name="idJuridiction"/>
+                <field name="parent_id"/>
+                <separator/>
+                <filter string="Cour d'Appel" name="ca" domain="[('CA','=',True)]"/>
+                <filter string="Tribunaux de Base" name="non_ca" domain="[('CA','=',False)]"/>
+                <filter string="Archivés" name="inactive" domain="[('active','=',False)]"/>
+                <separator/>
+                <filter string="Sans Parent" name="no_parent" domain="[('parent_id','=',False)]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter string="Ville" name="group_ville" context="{'group_by':'ville_id'}"/>
+                    <filter string="Parent" name="group_parent" context="{'group_by':'parent_id'}"/>
+                    <filter string="Type (CA)" name="group_ca" context="{'group_by':'CA'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action pour Tribunal -->
+    <record id="action_tribunal" model="ir.actions.act_window">
+        <field name="name">Tribunaux</field>
+        <field name="res_model">tribunal</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créer un nouveau tribunal
+            </p>
+            <p>
+                Gérez les tribunaux avec leur hiérarchie et leur classification.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu pour Tribunal -->
+    <menuitem id="menu_tribunal"
+              name="Tribunaux"
+              parent="menu_configuration"
+              action="action_tribunal"
+              sequence="45"/>
+
+</odoo>

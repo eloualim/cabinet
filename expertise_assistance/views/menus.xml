@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Menu Principal Expertise -->
+    <menuitem id="menu_expertise_root"
+              name="Expertise"
+              sequence="10"/>
+
+    <!-- Menu Gestion -->
+    <menuitem id="menu_gestion"
+              name="Gestion"
+              parent="menu_expertise_root"
+              sequence="10"/>
+
+    <!-- Menu Configuration -->
+    <menuitem id="menu_configuration"
+              name="Configuration"
+              parent="menu_expertise_root"
+              sequence="100"/>
+
+</odoo>

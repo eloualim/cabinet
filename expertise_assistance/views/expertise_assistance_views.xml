@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Séquence pour Expertise Assistance -->
+    <record id="seq_expertise_assistance" model="ir.sequence">
+        <field name="name">Expertise Assistance Sequence</field>
+        <field name="code">expertise.assistance</field>
+        <field name="prefix">EA</field>
+        <field name="padding">5</field>
+        <field name="number_next">1</field>
+        <field name="number_increment">1</field>
+    </record>
+
+    <!-- Vue Liste pour Expertise Assistance -->
+    <record id="view_expertise_assistance_tree" model="ir.ui.view">
+        <field name="name">expertise.assistance.tree</field>
+        <field name="model">expertise.assistance</field>
+        <field name="arch" type="xml">
+            <list string="Dossiers Expertise Assistance">
+                <field name="reference_dossier"/>
+                <field name="numero_dossier"/>
+                <field name="numero_dossier_mahakim"/>
+                <field name="tribunal_id"/>
+                <field name="ca_tribunal_id"/>
+                <field name="idjuridiction"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vue Formulaire pour Expertise Assistance -->
+    <record id="view_expertise_assistance_form" model="ir.ui.view">
+        <field name="name">expertise.assistance.form</field>
+        <field name="model">expertise.assistance</field>
+        <field name="arch" type="xml">
+            <form string="Dossier Expertise Assistance">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_fetch_dossier_data" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-download"
+                                string="Récupérer Données API"
+                                invisible="not idjuridiction or not numero_dossier_mahakim"/>
+                        <widget name="web_ribbon" title="Archivé" bg_color="bg-danger" invisible="active"/>
+                    </div>
+                    
+                    <div class="oe_title">
+                        <h1>
+                            <field name="reference_dossier" readonly="1"/>
+                        </h1>
+                    </div>
+                    
+                    <group>
+                        <group string="Informations du Dossier">
+                            <field name="numero_dossier"/>
+                            <field name="numero_dossier_mahakim"/>
+                            <field name="idjuridiction" readonly="1"/>
+                        </group>
+                        <group string="Tribunaux">
+                            <field name="ca_tribunal_id"/>
+                            <field name="tribunal_id"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Résumé" name="resume">
+                            <div class="alert alert-info" role="alert" invisible="resume">
+                                <i class="fa fa-info-circle"/> 
+                                <strong>Information:</strong> Cliquez sur le bouton "Récupérer Données API" pour charger les données du dossier depuis l'API Mahakim.
+                            </div>
+                            <div invisible="not resume" style="background-color: #ffffff; padding: 20px; border-radius: 8px; border: 2px solid #3498db; margin-top: 10px;">
+                                <field name="resume" 
+                                       widget="text"
+                                       nolabel="1" 
+                                       readonly="1"
+                                       options="{'style': 'font-family: Consolas, Monaco, monospace; font-size: 13px; line-height: 1.8; color: #2c3e50; white-space: pre-wrap;'}"/>
+                            </div>
+                        </page>
+                        <page string="Données API (JSON)" name="data">
+                            <div class="alert alert-info" role="alert" invisible="data_formatted">
+                                <i class="fa fa-info-circle"/> 
+                                <strong>Information:</strong> Cliquez sur le bouton "Récupérer Données API" pour charger les données du dossier depuis l'API Mahakim.
+                            </div>
+                            <div invisible="not data_formatted" style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; margin-top: 10px;">
+                                <field name="data_formatted" 
+                                       widget="text"
+                                       nolabel="1" 
+                                       readonly="1"
+                                       options="{'style': 'font-family: Consolas, Monaco, monospace; font-size: 13px; line-height: 1.6; color: #2c3e50; white-space: pre;'}"/>
+                            </div>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vue Recherche pour Expertise Assistance -->
+    <record id="view_expertise_assistance_search" model="ir.ui.view">
+        <field name="name">expertise.assistance.search</field>
+        <field name="model">expertise.assistance</field>
+        <field name="arch" type="xml">
+            <search string="Rechercher Dossiers">
+                <field name="reference_dossier"/>
+                <field name="numero_dossier"/>
+                <field name="numero_dossier_mahakim"/>
+                <field name="idjuridiction"/>
+                <field name="tribunal_id"/>
+                <field name="ca_tribunal_id"/>
+                <separator/>
+                <filter string="Archivés" name="inactive" domain="[('active','=',False)]"/>
+                <group expand="0" string="Regrouper par">
+                    <filter string="Tribunal" name="group_tribunal" context="{'group_by':'tribunal_id'}"/>
+                    <filter string="Tribunal CA" name="group_ca" context="{'group_by':'ca_tribunal_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action pour Expertise Assistance -->
+    <record id="action_expertise_assistance" model="ir.actions.act_window">
+        <field name="name">Dossiers Expertise Assistance</field>
+        <field name="res_model">expertise.assistance</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Créer un nouveau dossier d'expertise assistance
+            </p>
+            <p>
+                Gérez vos dossiers d'expertise avec leurs références et données associées.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu pour Expertise Assistance -->
+    <menuitem id="menu_expertise_assistance"
+              name="Dossiers Expertise"
+              parent="menu_gestion"
+              action="action_expertise_assistance"
+              sequence="10"/>
+
+</odoo>

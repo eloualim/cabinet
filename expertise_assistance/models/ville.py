@@ -28,3 +28,9 @@ class Ville(models.Model):
         default=True,
         help="Décocher pour archiver la ville"
     )
+
+    _sql_constraints = [
+        ('name_unique', 
+         'UNIQUE(name)', 
+         'Ce nom de ville existe déjà!'),
+    ]

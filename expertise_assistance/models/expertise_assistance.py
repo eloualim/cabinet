@@ -75,6 +75,20 @@ class ExpertiseAssistance(models.Model):
         help="Résumé des informations principales du dossier"
     )
 
+    attachment_ids = fields.One2many(
+        'ir.attachment',
+        'res_id',
+        domain=[('res_model', '=', 'expertise.assistance')],
+        string="Pièces Jointes",
+        help="Documents attachés au dossier"
+    )
+
+    attachment_count = fields.Integer(
+        string="Nombre de pièces jointes",
+        compute='_compute_attachment_count',
+        help="Nombre de fichiers attachés"
+    )
+
     active = fields.Boolean(
         string="Actif",
         default=True,
@@ -211,6 +225,27 @@ class ExpertiseAssistance(models.Model):
                 
             except Exception as e:
                 record.resume = f"Erreur lors de la génération du résumé: {str(e)}"
+
+    @api.depends('attachment_ids')
+    def _compute_attachment_count(self):
+        """Calcule le nombre de pièces jointes"""
+        for record in self:
+            record.attachment_count = len(record.attachment_ids)
+
+    def action_view_attachments(self):
+        """Ouvre la vue des pièces jointes"""
+        self.ensure_one()
+        return {
+            'name': 'Pièces Jointes',
+            'type': 'ir.actions.act_window',
+            'res_model': 'ir.attachment',
+            'view_mode': 'kanban,list,form',
+            'domain': [('res_model', '=', 'expertise.assistance'), ('res_id', '=', self.id)],
+            'context': {
+                'default_res_model': 'expertise.assistance',
+                'default_res_id': self.id,
+            }
+        }
 
     @api.onchange('ca_tribunal_id')
     def _onchange_ca_tribunal_id(self):

@@ -41,6 +41,12 @@
                                 icon="fa-download"
                                 string="Récupérer Données API"
                                 invisible="not idjuridiction or not numero_dossier_mahakim"/>
+                        <button name="action_view_attachments"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-paperclip">
+                            <field name="attachment_count" widget="statinfo" string="Pièces Jointes"/>
+                        </button>
                         <widget name="web_ribbon" title="Archivé" bg_color="bg-danger" invisible="active"/>
                     </div>
                     
@@ -76,6 +82,13 @@
                                        readonly="1"
                                        options="{'style': 'font-family: Consolas, Monaco, monospace; font-size: 13px; line-height: 1.8; color: #2c3e50; white-space: pre-wrap;'}"/>
                             </div>
+                        </page>
+                        <page string="Pièces Jointes" name="attachments">
+                            <field name="attachment_ids" 
+                                   widget="many2many_binary" 
+                                   string="Fichiers"
+                                   nolabel="1"
+                                   context="{'default_res_model': 'expertise.assistance', 'default_res_id': id}"/>
                         </page>
                         <page string="Données API (JSON)" name="data">
                             <div class="alert alert-info" role="alert" invisible="data_formatted">

@@ -58,5 +58,8 @@ class Tribunal(models.Model):
     _sql_constraints = [
         ('idjuridiction_unique', 
          'UNIQUE(idJuridiction)', 
-         'L\'ID Juridiction doit être unique!')
+         'L\'ID Juridiction doit être unique!'),
+        ('name_unique', 
+         'UNIQUE(name)', 
+         'Ce nom de tribunal existe déjà!'),
     ]

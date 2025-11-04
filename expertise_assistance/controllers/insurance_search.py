@@ -71,8 +71,26 @@ class HelloApiController(http.Controller):
             created_dossiers = []
             errors = []
             
+            # Créer une copie des données pour le logging sans les données base64
+            data_for_logging = []
+            for item in data:
+                item_copy = item.copy()
+                if item_copy.get('files') and isinstance(item_copy['files'], list):
+                    files_summary = []
+                    for file_info in item_copy['files']:
+                        file_summary = file_info.copy()
+                        if 'data' in file_summary:
+                            # Remplacer les données base64 par un indicateur
+                            file_summary['data'] = f"[BASE64_DATA_{len(file_info.get('data', ''))} chars]"
+                        files_summary.append(file_summary)
+                    item_copy['files'] = files_summary
+                data_for_logging.append(item_copy)
+            
             for dossier_data in data:
                 try:
+                    _logger.info(f"=== Traitement dossier: {dossier_data.get('num_dossier_complet')} ===")
+                    _logger.info(f"Nombre de fichiers: {len(dossier_data.get('files', [])) if dossier_data.get('files') else 0}")
+                    
                     # Rechercher ou créer le tribunal
                     tribunal = None
                     if dossier_data.get('id_jurisdiction') and dossier_data.get('tribunal'):
@@ -101,12 +119,26 @@ class HelloApiController(http.Controller):
                                 'CA': False
                             })
                     
+                    # Préparer les données pour sauvegarde (sans les données base64)
+                    data_to_save = dossier_data.copy()
+                    
+                    # Si des fichiers existent, sauvegarder seulement les métadonnées (pas la data base64)
+                    if data_to_save.get('files') and isinstance(data_to_save['files'], list):
+                        files_metadata = []
+                        for file_info in data_to_save['files']:
+                            files_metadata.append({
+                                'fileName': file_info.get('fileName'),
+                                'fileExtension': file_info.get('fileExtension'),
+                                'mimeType': file_info.get('mimeType')
+                            })
+                        data_to_save['files'] = files_metadata
+                    
                     # Créer le dossier expertise.assistance
                     dossier_vals = {
                         'numero_dossier': dossier_data.get('num_dossier'),
                         'numero_dossier_mahakim': dossier_data.get('num_dossier_complet'),
                         'tribunal_id': tribunal.id if tribunal else False,
-                        'data': dossier_data  # Stocker toutes les données JSON
+                        'data': data_to_save  # Stocker les données JSON sans base64
                     }
                     
                     # Vérifier si le dossier existe déjà
@@ -126,22 +158,24 @@ class HelloApiController(http.Controller):
                         # Créer nouveau
                         dossier = env['expertise.assistance'].create(dossier_vals)
                         
-                        # Traiter les fichiers si présents
-                        if dossier_data.get('files'):
+                        # Traiter les fichiers si présents et non null
+                        if dossier_data.get('files') and isinstance(dossier_data['files'], list):
                             attachments_created = []
                             for file_data in dossier_data['files']:
                                 try:
-                                    # Le data est déjà en base64, pas besoin de décoder/ré-encoder
-                                    attachment = env['ir.attachment'].create({
-                                        'name': file_data.get('fileName', 'document.pdf'),
-                                        'datas': file_data.get('data'),  # Base64 string
-                                        'res_model': 'expertise.assistance',
-                                        'res_id': dossier.id,
-                                        'mimetype': file_data.get('mimeType', 'application/pdf'),
-                                        'type': 'binary',
-                                    })
-                                    attachments_created.append(attachment.id)
-                                    _logger.info(f"Pièce jointe créée: {attachment.name} (ID: {attachment.id})")
+                                    # Vérifier que le fichier a bien des données
+                                    if file_data.get('data'):
+                                        # Le data est déjà en base64, pas besoin de décoder/ré-encoder
+                                        attachment = env['ir.attachment'].create({
+                                            'name': file_data.get('fileName', 'document.pdf'),
+                                            'datas': file_data.get('data'),  # Base64 string
+                                            'res_model': 'expertise.assistance',
+                                            'res_id': dossier.id,
+                                            'mimetype': file_data.get('mimeType', 'application/pdf'),
+                                            'type': 'binary',
+                                        })
+                                        attachments_created.append(attachment.id)
+                                        _logger.info(f"Pièce jointe créée: {attachment.name} (ID: {attachment.id})")
                                 except Exception as e:
                                     _logger.error(f"Erreur création pièce jointe: {str(e)}")
                         
@@ -167,7 +201,8 @@ class HelloApiController(http.Controller):
                     'total_processed': len(data),
                     'total_success': len(created_dossiers),
                     'total_errors': len(errors),
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': datetime.now().isoformat(),
+                    'received_data_summary': data_for_logging  # Données reçues sans base64
                 }
             })
             

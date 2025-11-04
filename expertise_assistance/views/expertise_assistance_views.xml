@@ -19,8 +19,13 @@
                 <field name="reference_dossier"/>
                 <field name="numero_dossier"/>
                 <field name="numero_dossier_mahakim"/>
+                <field name="status" widget="badge" 
+                       decoration-danger="status == 'incorrect'"
+                       decoration-warning="status == 'incomplete'"
+                       decoration-success="status == 'complete'"/>
                 <field name="tribunal_id"/>
-                <field name="ca_tribunal_id"/>
+                <field name="magistrat"/>
+                <field name="date_prochaine_audience"/>
                 <field name="idjuridiction"/>
                 <field name="active"/>
             </list>
@@ -41,12 +46,6 @@
                                 icon="fa-download"
                                 string="Récupérer Données API"
                                 invisible="not idjuridiction or not numero_dossier_mahakim"/>
-                        <button name="action_view_attachments"
-                                type="object"
-                                class="oe_stat_button"
-                                icon="fa-paperclip">
-                            <field name="attachment_count" widget="statinfo" string="Pièces Jointes"/>
-                        </button>
                         <widget name="web_ribbon" title="Archivé" bg_color="bg-danger" invisible="active"/>
                     </div>
                     
@@ -61,10 +60,14 @@
                             <field name="numero_dossier"/>
                             <field name="numero_dossier_mahakim"/>
                             <field name="idjuridiction" readonly="1"/>
+                            <field name="status" widget="selection"/>
                         </group>
-                        <group string="Tribunaux">
+                        <group string="Tribunaux et Acteurs">
                             <field name="ca_tribunal_id"/>
                             <field name="tribunal_id"/>
+                            <field name="magistrat"/>
+                            <field name="greffier"/>
+                            <field name="date_prochaine_audience"/>
                             <field name="active"/>
                         </group>
                     </group>
@@ -83,14 +86,108 @@
                                        options="{'style': 'font-family: Consolas, Monaco, monospace; font-size: 13px; line-height: 1.8; color: #2c3e50; white-space: pre-wrap;'}"/>
                             </div>
                         </page>
-                        <page string="Pièces Jointes" name="attachments">
-                            <field name="attachment_ids" 
-                                   widget="many2many_binary" 
-                                   string="Fichiers"
-                                   nolabel="1"
-                                   context="{'default_res_model': 'expertise.assistance', 'default_res_id': id}"/>
+                        <page string="Parties" name="parties">
+                            <field name="parties_ids" nolabel="1">
+                                <list editable="bottom">
+                                    <field name="nom_prenom"/>
+                                    <field name="role" 
+                                           decoration-success="role == 'مدعي'"
+                                           decoration-info="role == 'مدعى عليه'"/>
+                                    <field name="type_personne" widget="badge" 
+                                           decoration-info="type_personne == 'PP'"
+                                           decoration-primary="type_personne == 'PM'"/>
+                                    <field name="count_avocats"/>
+                                    <field name="count_mandataires"/>
+                                    <field name="count_huissiers"/>
+                                    <field name="count_representants"/>
+                                </list>
+                                <form string="Partie">
+                                    <group>
+                                        <group string="Informations Principales">
+                                            <field name="id_partie" readonly="1"/>
+                                            <field name="nom_prenom"/>
+                                            <field name="role"/>
+                                            <field name="type_personne"/>
+                                        </group>
+                                        <group string="Compteurs">
+                                            <field name="count_avocats"/>
+                                            <field name="count_mandataires"/>
+                                            <field name="count_huissiers"/>
+                                            <field name="count_representants"/>
+                                        </group>
+                                    </group>
+                                    <notebook>
+                                        <page string="📊 Toutes les Données" name="all_data">
+                                            <div class="alert alert-success" role="alert" style="margin-bottom: 15px;">
+                                                <i class="fa fa-database"/> 
+                                                <strong>Données Complètes:</strong> Affichage de TOUTES les données JSON reçues de l'API, quel que soit le code du tribunal.
+                                            </div>
+                                            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                                                <field name="raw_data_formatted" 
+                                                       widget="text"
+                                                       nolabel="1" 
+                                                       readonly="1"
+                                                       options="{'style': 'font-family: Consolas, Monaco, monospace; font-size: 12px; line-height: 1.6; color: #2c3e50; white-space: pre;'}"/>
+                                            </div>
+                                        </page>
+                                    </notebook>
+                                </form>
+                            </field>
+                        </page>
+                        <page string="Décisions" name="decisions">
+                            <field name="decisions_ids" nolabel="1">
+                                <list editable="bottom">
+                                    <field name="date_time_decision"/>
+                                    <field name="type_decision" widget="badge" decoration-primary="True"/>
+                                    <field name="contenu_decision"/>
+                                    <field name="date_time_next_audience" 
+                                           decoration-warning="date_time_next_audience"/>
+                                    <field name="numero_jugement"/>
+                                </list>
+                                <form string="Décision">
+                                    <group>
+                                        <group string="Informations Principales">
+                                            <field name="id_decision" readonly="1"/>
+                                            <field name="date_time_decision"/>
+                                            <field name="type_decision"/>
+                                            <field name="numero_jugement"/>
+                                        </group>
+                                        <group string="Dates">
+                                            <field name="date_time_next_audience"/>
+                                            <field name="date_de"/>
+                                            <field name="date_na"/>
+                                        </group>
+                                    </group>
+                                    <group string="Contenu">
+                                        <field name="contenu_decision" nolabel="1"/>
+                                    </group>
+                                    <notebook>
+                                        <page string="📊 Toutes les Données" name="all_data">
+                                            <div class="alert alert-success" role="alert" style="margin-bottom: 15px;">
+                                                <i class="fa fa-database"/> 
+                                                <strong>Données Complètes:</strong> Affichage de TOUTES les données JSON reçues de l'API, quel que soit le code du tribunal.
+                                            </div>
+                                            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                                                <field name="raw_data_formatted" 
+                                                       widget="text"
+                                                       nolabel="1" 
+                                                       readonly="1"
+                                                       options="{'style': 'font-family: Consolas, Monaco, monospace; font-size: 12px; line-height: 1.6; color: #2c3e50; white-space: pre;'}"/>
+                                            </div>
+                                        </page>
+                                    </notebook>
+                                </form>
+                            </field>
                         </page>
                         <page string="Données API (JSON)" name="data">
+                            <div class="oe_button_box" name="json_buttons" style="margin-bottom: 10px;">
+                                <button name="action_fill_from_json" 
+                                        type="object" 
+                                        class="btn btn-primary" 
+                                        string="📝 Remplir les champs depuis JSON"
+                                        invisible="not data"
+                                        help="Remplit automatiquement les champs du dossier à partir des données JSON"/>
+                            </div>
                             <div class="alert alert-info" role="alert" invisible="data_formatted">
                                 <i class="fa fa-info-circle"/> 
                                 <strong>Information:</strong> Cliquez sur le bouton "Récupérer Données API" pour charger les données du dossier depuis l'API Mahakim.
@@ -105,6 +202,7 @@
                         </page>
                     </notebook>
                 </sheet>
+                <chatter/>
             </form>
         </field>
     </record>
@@ -121,11 +219,21 @@
                 <field name="idjuridiction"/>
                 <field name="tribunal_id"/>
                 <field name="ca_tribunal_id"/>
+                <field name="magistrat"/>
+                <field name="greffier"/>
+                <separator/>
+                <filter string="Incorrect" name="incorrect" domain="[('status','=','incorrect')]"/>
+                <filter string="Incomplet" name="incomplete" domain="[('status','=','incomplete')]"/>
+                <filter string="Complet" name="complete" domain="[('status','=','complete')]"/>
                 <separator/>
                 <filter string="Archivés" name="inactive" domain="[('active','=',False)]"/>
+                <filter string="Audience à venir" name="upcoming_audience" 
+                        domain="[('date_prochaine_audience','!=',False)]"/>
                 <group expand="0" string="Regrouper par">
+                    <filter string="Statut" name="group_status" context="{'group_by':'status'}"/>
                     <filter string="Tribunal" name="group_tribunal" context="{'group_by':'tribunal_id'}"/>
                     <filter string="Tribunal CA" name="group_ca" context="{'group_by':'ca_tribunal_id'}"/>
+                    <filter string="Magistrat" name="group_magistrat" context="{'group_by':'magistrat'}"/>
                 </group>
             </search>
         </field>

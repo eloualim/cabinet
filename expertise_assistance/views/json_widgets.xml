@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- Widget personnalisé pour afficher les Parties -->
+    <template id="parties_display_template">
+        <div class="o_expertise_parties">
+            <t t-if="record.data and record.data.data and record.data.data.parties">
+                <t t-foreach="record.data.data.parties" t-as="partie">
+                    <div class="card mb-3" style="border-left: 4px solid #3498db;">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="fa fa-user"/> 
+                                <t t-esc="partie.nomPrenomPartie"/>
+                            </h5>
+                            <p class="card-text">
+                                <span class="badge" t-att-class="'badge-' + ('primary' if partie.rolePartie == 'مدعي' else 'secondary')">
+                                    <t t-esc="partie.rolePartie"/>
+                                </span>
+                                <span class="ml-2">
+                                    Type: <strong><t t-esc="partie.codeTypePersonne"/></strong>
+                                </span>
+                            </p>
+                            <div class="row">
+                                <div class="col-md-3" t-if="partie.countAvocatsPartie &gt; 0">
+                                    <small><i class="fa fa-gavel"/> Avocats: <t t-esc="partie.countAvocatsPartie"/></small>
+                                </div>
+                                <div class="col-md-3" t-if="partie.countMandatairesPartie &gt; 0">
+                                    <small><i class="fa fa-users"/> Mandataires: <t t-esc="partie.countMandatairesPartie"/></small>
+                                </div>
+                                <div class="col-md-3" t-if="partie.countHuissiersPartie &gt; 0">
+                                    <small><i class="fa fa-file-text-o"/> Huissiers: <t t-esc="partie.countHuissiersPartie"/></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+            <t t-else="">
+                <div class="alert alert-info">
+                    <i class="fa fa-info-circle"/> Aucune partie disponible
+                </div>
+            </t>
+        </div>
+    </template>
+
+    <!-- Widget personnalisé pour afficher les Décisions -->
+    <template id="decisions_display_template">
+        <div class="o_expertise_decisions">
+            <t t-if="record.data and record.data.data and record.data.data.decisions">
+                <div class="timeline">
+                    <t t-foreach="record.data.data.decisions" t-as="decision">
+                        <div class="timeline-item" style="margin-bottom: 20px; padding-left: 30px; border-left: 2px solid #3498db; position: relative;">
+                            <div class="timeline-marker" style="position: absolute; left: -8px; top: 0; width: 16px; height: 16px; border-radius: 50%; background-color: #3498db;"></div>
+                            <div class="card">
+                                <div class="card-header" style="background-color: #ecf0f1;">
+                                    <strong><t t-esc="decision.typeDecision"/></strong>
+                                    <span class="float-right text-muted">
+                                        <i class="fa fa-calendar"/> <t t-esc="decision.dateTimeDecision"/>
+                                    </span>
+                                </div>
+                                <div class="card-body">
+                                    <p><t t-esc="decision.contenuDecision"/></p>
+                                    <t t-if="decision.dateTimeNextAudience">
+                                        <div class="alert alert-warning" style="margin-bottom: 0;">
+                                            <i class="fa fa-clock-o"/> 
+                                            <strong>Prochaine audience:</strong> <t t-esc="decision.dateTimeNextAudience"/>
+                                        </div>
+                                    </t>
+                                    <t t-if="decision.numeroJugement">
+                                        <small class="text-muted">
+                                            N° Jugement: <strong><t t-esc="decision.numeroJugement"/></strong>
+                                        </small>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </div>
+            </t>
+            <t t-else="">
+                <div class="alert alert-info">
+                    <i class="fa fa-info-circle"/> Aucune décision disponible
+                </div>
+            </t>
+        </div>
+    </template>
+
+</odoo>

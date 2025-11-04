@@ -14,6 +14,7 @@ class ExpertiseAssistance(models.Model):
     _description = "Expertise Assistance"
     _order = "reference_dossier desc"
     _rec_name = "reference_dossier"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
     reference_dossier = fields.Char(
         string="Référence Dossier",
@@ -58,6 +59,32 @@ class ExpertiseAssistance(models.Model):
         help="ID Juridiction du tribunal sélectionné (tribunal_id si présent, sinon ca_tribunal_id)"
     )
 
+    # Nouveaux champs
+    status = fields.Selection([
+        ('incorrect', 'Incorrect'),
+        ('incomplete', 'Incomplet'),
+        ('complete', 'Complet')
+    ], string="Statut", default='incomplete', required=True, tracking=True,
+       help="Statut de complétude du dossier")
+
+    magistrat = fields.Char(
+        string="Magistrat",
+        tracking=True,
+        help="Nom du magistrat/juge rapporteur"
+    )
+
+    greffier = fields.Char(
+        string="Greffier",
+        tracking=True,
+        help="Nom du greffier"
+    )
+
+    date_prochaine_audience = fields.Datetime(
+        string="Prochaine Audience",
+        tracking=True,
+        help="Date et heure de la prochaine audience"
+    )
+
     data = fields.Json(
         string="Données JSON",
         help="Données au format JSON"
@@ -75,18 +102,18 @@ class ExpertiseAssistance(models.Model):
         help="Résumé des informations principales du dossier"
     )
 
-    attachment_ids = fields.One2many(
-        'ir.attachment',
-        'res_id',
-        domain=[('res_model', '=', 'expertise.assistance')],
-        string="Pièces Jointes",
-        help="Documents attachés au dossier"
+    parties_ids = fields.One2many(
+        'expertise.partie',
+        'dossier_id',
+        string="Parties",
+        help="Liste des parties au dossier"
     )
 
-    attachment_count = fields.Integer(
-        string="Nombre de pièces jointes",
-        compute='_compute_attachment_count',
-        help="Nombre de fichiers attachés"
+    decisions_ids = fields.One2many(
+        'expertise.decision',
+        'dossier_id',
+        string="Décisions",
+        help="Liste des décisions"
     )
 
     active = fields.Boolean(
@@ -120,7 +147,7 @@ class ExpertiseAssistance(models.Model):
 
     @api.depends('data')
     def _compute_resume(self):
-        """Génère un résumé lisible des informations principales du dossier"""
+        """Génère un résumé lisible des informations principales du dossier - Version flexible"""
         for record in self:
             if not record.data:
                 record.resume = ""
@@ -130,7 +157,7 @@ class ExpertiseAssistance(models.Model):
                 data = record.data.get('data', {}) if isinstance(record.data, dict) else {}
                 carte = data.get('carte', {})
                 parties = data.get('parties', [])
-                expertises = data.get('expertises', [])
+                expertises = data.get('expertises', {})
                 decisions = data.get('decisions', [])
                 
                 resume_parts = []
@@ -143,78 +170,141 @@ class ExpertiseAssistance(models.Model):
                 if carte:
                     resume_parts.append("📋 INFORMATIONS GÉNÉRALES")
                     resume_parts.append("─────────────────────────────────────────────")
-                    resume_parts.append(f"Numéro Dossier: {carte.get('numeroCompletDossier1Instance', 'N/A')}")
-                    resume_parts.append(f"Numéro National: {carte.get('numeroCompletNationalDossier1Instance', 'N/A')}")
-                    resume_parts.append(f"Type d'affaire: {carte.get('affaire', 'N/A')}")
-                    resume_parts.append(f"Entité: {carte.get('libEntite', 'N/A')}")
-                    resume_parts.append(f"Type de requête: {carte.get('typeRequette', 'N/A')}")
-                    resume_parts.append(f"Date d'enregistrement: {carte.get('dateEnregistrementDossierDansRegistre', 'N/A')}")
+                    
+                    # Numéro dossier - flexible
+                    numero = carte.get('numeroDossierComplet') or carte.get('numeroCompletDossier1Instance') or 'N/A'
+                    resume_parts.append(f"Numéro Dossier: {numero}")
+                    
+                    # Nature affaire
+                    nature = carte.get('natureAffaire') or carte.get('affaire') or 'N/A'
+                    resume_parts.append(f"Nature d'affaire: {nature}")
+                    
+                    # Entité
+                    entite = carte.get('entite') or carte.get('libEntite') or 'N/A'
+                    resume_parts.append(f"Entité: {entite}")
+                    
+                    # Date enregistrement
+                    date_enreg = carte.get('dateEnregistrementString') or carte.get('dateEnregistrementDossierDansRegistre') or 'N/A'
+                    resume_parts.append(f"Date d'enregistrement: {date_enreg}")
                     resume_parts.append("")
                 
-                # === JURIDICTION ===
-                if carte.get('juridiction1Instance'):
-                    resume_parts.append("⚖️  JURIDICTION")
+                # === DERNIER JUGEMENT (depuis carte.lastJugement) ===
+                last_jugement = carte.get('lastJugement', {}) if isinstance(carte.get('lastJugement'), dict) else {}
+                if last_jugement and last_jugement.get('contenu'):
+                    resume_parts.append("📜 DERNIER JUGEMENT")
                     resume_parts.append("─────────────────────────────────────────────")
-                    resume_parts.append(f"Tribunal: {carte.get('juridiction1Instance', 'N/A')}")
-                    resume_parts.append(f"Juge Rapporteur: {carte.get('jugeRapporteur', 'N/A')}")
+                    resume_parts.append(f"Contenu: {last_jugement.get('contenu', 'N/A')}")
+                    resume_parts.append(f"Date: {last_jugement.get('dateJugementString', 'N/A')}")
+                    resume_parts.append(f"Finalité: {last_jugement.get('finalite', 'N/A')}")
+                    
+                    if last_jugement.get('numeroJugement'):
+                        resume_parts.append(f"N° Jugement: {last_jugement.get('numeroJugement')}")
+                    
+                    if last_jugement.get('dateProchaineAudienceString'):
+                        heure = last_jugement.get('heureProchaineAudience', '')
+                        salle = last_jugement.get('roomNumberProchaineAudience', '')
+                        resume_parts.append(f"Prochaine audience: {last_jugement.get('dateProchaineAudienceString')} à {heure} - Salle {salle}")
+                    
                     resume_parts.append("")
                 
                 # === PARTIES ===
-                if parties:
+                if parties and isinstance(parties, list):
                     resume_parts.append("👥 PARTIES")
                     resume_parts.append("─────────────────────────────────────────────")
                     for i, partie in enumerate(parties, 1):
-                        type_personne = "Personne Morale" if partie.get('codeTypePersonne') == 'PM' else "Personne Physique"
-                        resume_parts.append(f"{i}. {partie.get('nomPrenomPartie', 'N/A')}")
-                        resume_parts.append(f"   Rôle: {partie.get('rolePartie', 'N/A')} - {type_personne}")
-                        if partie.get('countAvocatsPartie', 0) > 0:
-                            resume_parts.append(f"   Avocats: {partie.get('countAvocatsPartie')}")
+                        # Nom - flexible
+                        nom = partie.get('fullName') or partie.get('nomPrenomPartie') or 'N/A'
+                        
+                        # Rôle - flexible
+                        role = partie.get('role') or partie.get('rolePartie') or 'N/A'
+                        
+                        # Type personne - flexible
+                        type_pers = partie.get('typePersonne') or partie.get('codeTypePersonne') or 'N/A'
+                        type_label = "Personne Morale" if type_pers == 'PM' else "Personne Physique"
+                        
+                        resume_parts.append(f"{i}. {nom}")
+                        resume_parts.append(f"   Rôle: {role} - {type_label}")
+                        
+                        # Compteurs optionnels
+                        count_avocats = partie.get('countAvocatsPartie', 0)
+                        if count_avocats and count_avocats > 0:
+                            resume_parts.append(f"   Avocats: {count_avocats}")
+                    
                     resume_parts.append("")
                 
                 # === EXPERTISES ===
-                if expertises:
-                    resume_parts.append("🔬 EXPERTISES")
-                    resume_parts.append("─────────────────────────────────────────────")
-                    for i, expertise in enumerate(expertises, 1):
-                        resume_parts.append(f"{i}. Mission: {expertise.get('libMission', 'N/A')}")
-                        resume_parts.append(f"   N° Dossier MI: {expertise.get('numeroDossierMI', 'N/A')}")
-                        resume_parts.append(f"   État: {expertise.get('etatMission', 'N/A')}")
-                        experts = expertise.get('experts', [])
-                        if experts:
-                            resume_parts.append(f"   Expert(s): {', '.join(experts)}")
-                        if expertise.get('dateEtatMission'):
-                            resume_parts.append(f"   Date: {expertise.get('dateEtatMission')}")
-                    resume_parts.append("")
-                
-                # === DERNIER JUGEMENT ===
-                if carte.get('libelleDernierJugement'):
-                    resume_parts.append("📜 DERNIER JUGEMENT")
-                    resume_parts.append("─────────────────────────────────────────────")
-                    resume_parts.append(f"Libellé: {carte.get('libelleDernierJugement', 'N/A')}")
-                    resume_parts.append(f"Date: {carte.get('dateDernierJugement', 'N/A')}")
-                    if carte.get('etatDernierJugement'):
-                        resume_parts.append(f"État: {carte.get('etatDernierJugement')}")
-                    resume_parts.append("")
+                if expertises and isinstance(expertises, (list, dict)):
+                    # Si c'est un dict avec une erreur, l'ignorer
+                    if isinstance(expertises, dict) and expertises.get('error'):
+                        pass
+                    elif isinstance(expertises, list) and expertises:
+                        resume_parts.append("🔬 EXPERTISES")
+                        resume_parts.append("─────────────────────────────────────────────")
+                        for i, expertise in enumerate(expertises, 1):
+                            mission = expertise.get('libMission') or expertise.get('mission') or 'N/A'
+                            resume_parts.append(f"{i}. Mission: {mission}")
+                            
+                            num_dossier = expertise.get('numeroDossierMI') or expertise.get('numero') or ''
+                            if num_dossier:
+                                resume_parts.append(f"   N° Dossier MI: {num_dossier}")
+                            
+                            etat = expertise.get('etatMission') or expertise.get('etat') or ''
+                            if etat:
+                                resume_parts.append(f"   État: {etat}")
+                            
+                            experts = expertise.get('experts', [])
+                            if experts:
+                                resume_parts.append(f"   Expert(s): {', '.join(experts)}")
+                        
+                        resume_parts.append("")
                 
                 # === DÉCISIONS RÉCENTES ===
-                if decisions:
-                    resume_parts.append("📌 DERNIÈRES DÉCISIONS (5 plus récentes)")
+                if decisions and isinstance(decisions, list):
+                    resume_parts.append("� DERNIÈRES DÉCISIONS (5 plus récentes)")
                     resume_parts.append("─────────────────────────────────────────────")
                     for i, decision in enumerate(decisions[:5], 1):
-                        resume_parts.append(f"{i}. {decision.get('typeDecision', 'N/A')}")
-                        resume_parts.append(f"   Date: {decision.get('dateTimeDecision', 'N/A')}")
-                        if decision.get('contenuDecision'):
-                            resume_parts.append(f"   Contenu: {decision.get('contenuDecision')}")
-                        if decision.get('dateTimeNextAudience'):
-                            resume_parts.append(f"   Prochaine audience: {decision.get('dateTimeNextAudience')}")
+                        # Type/finalité - flexible
+                        type_dec = decision.get('finalite') or decision.get('typeDecision') or 'N/A'
+                        
+                        # Date - flexible
+                        date_dec = decision.get('dateJugementString') or decision.get('dateTimeDecision') or 'N/A'
+                        
+                        # Contenu
+                        contenu = decision.get('contenu') or decision.get('contenuDecision') or ''
+                        
+                        resume_parts.append(f"{i}. {type_dec}")
+                        resume_parts.append(f"   Date: {date_dec}")
+                        
+                        if contenu:
+                            # Limiter la longueur du contenu
+                            contenu_court = contenu[:100] + "..." if len(contenu) > 100 else contenu
+                            resume_parts.append(f"   Contenu: {contenu_court}")
+                        
+                        # Numéro jugement
+                        num_jug = decision.get('numeroJugement')
+                        if num_jug:
+                            resume_parts.append(f"   N° Jugement: {num_jug}")
+                        
+                        # Prochaine audience
+                        proch_aud = decision.get('dateProchaineAudienceString') or decision.get('dateTimeNextAudience')
+                        if proch_aud:
+                            heure = decision.get('heureProchaineAudience', '')
+                            if heure:
+                                resume_parts.append(f"   Prochaine audience: {proch_aud} à {heure}")
+                            else:
+                                resume_parts.append(f"   Prochaine audience: {proch_aud}")
+                        
                         resume_parts.append("")
                 
                 # === STATISTIQUES ===
                 resume_parts.append("📊 STATISTIQUES")
                 resume_parts.append("─────────────────────────────────────────────")
-                resume_parts.append(f"Nombre de parties: {len(parties)}")
-                resume_parts.append(f"Nombre d'expertises: {len(expertises)}")
-                resume_parts.append(f"Nombre de décisions: {len(decisions)}")
+                resume_parts.append(f"Nombre de parties: {len(parties) if isinstance(parties, list) else 0}")
+                
+                nb_expertises = len(expertises) if isinstance(expertises, list) else 0
+                resume_parts.append(f"Nombre d'expertises: {nb_expertises}")
+                
+                resume_parts.append(f"Nombre de décisions: {len(decisions) if isinstance(decisions, list) else 0}")
                 
                 # Timestamp
                 if data.get('timestamp'):
@@ -224,28 +314,8 @@ class ExpertiseAssistance(models.Model):
                 record.resume = "\n".join(resume_parts)
                 
             except Exception as e:
+                _logger.error(f"Erreur lors de la génération du résumé: {str(e)}")
                 record.resume = f"Erreur lors de la génération du résumé: {str(e)}"
-
-    @api.depends('attachment_ids')
-    def _compute_attachment_count(self):
-        """Calcule le nombre de pièces jointes"""
-        for record in self:
-            record.attachment_count = len(record.attachment_ids)
-
-    def action_view_attachments(self):
-        """Ouvre la vue des pièces jointes"""
-        self.ensure_one()
-        return {
-            'name': 'Pièces Jointes',
-            'type': 'ir.actions.act_window',
-            'res_model': 'ir.attachment',
-            'view_mode': 'kanban,list,form',
-            'domain': [('res_model', '=', 'expertise.assistance'), ('res_id', '=', self.id)],
-            'context': {
-                'default_res_model': 'expertise.assistance',
-                'default_res_id': self.id,
-            }
-        }
 
     @api.onchange('ca_tribunal_id')
     def _onchange_ca_tribunal_id(self):
@@ -291,13 +361,16 @@ class ExpertiseAssistance(models.Model):
             # Stockage dans le champ data
             self.data = data
             
+            # Générer automatiquement le résumé après récupération
+            self._compute_resume()
+            
             _logger.info(f"Données du dossier {self.reference_dossier} récupérées avec succès")
             
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
-                    'title': _('Succès'),
+                    'title': _('✅ Succès'),
                     'message': _('Les données du dossier ont été récupérées avec succès.'),
                     'type': 'success',
                     'sticky': False,
@@ -312,3 +385,215 @@ class ExpertiseAssistance(models.Model):
             error_msg = f"Erreur inattendue: {str(e)}"
             _logger.error(error_msg)
             raise UserError(_(error_msg))
+
+    def action_fill_from_json(self):
+        """Remplit les champs du dossier à partir des données JSON"""
+        self.ensure_one()
+        
+        if not self.data:
+            raise UserError(_("Aucune donnée JSON disponible. Veuillez d'abord récupérer les données via l'API."))
+        
+        try:
+            from datetime import datetime
+            data = self.data
+            
+            # Vérifier la structure des données
+            if not isinstance(data, dict) or 'data' not in data:
+                raise UserError(_("Format des données JSON invalide."))
+            
+            api_data = data.get('data', {})
+            carte = api_data.get('carte', {})
+            parties_data = api_data.get('parties', [])
+            decisions_data = api_data.get('decisions', [])
+            
+            # Remplir les champs depuis carte
+            if carte:
+                # Magistrat (juge rapporteur)
+                if carte.get('jugeRapporteur'):
+                    self.magistrat = carte.get('jugeRapporteur')
+                
+                # Numéro de dossier
+                if carte.get('numeroCompletDossier1Instance'):
+                    self.numero_dossier = carte.get('numeroCompletDossier1Instance')
+            
+            # Supprimer les parties existantes
+            self.parties_ids.unlink()
+            
+            # Créer les parties - Approche flexible clé/valeur
+            for partie in parties_data:
+                values = {
+                    'dossier_id': self.id,
+                    'raw_data': partie,  # Sauvegarder TOUTES les données JSON
+                }
+                
+                # Extraction intelligente : essayer différents noms de champs possibles
+                # ID Partie
+                for key in ['idPartie', 'idPartieDossier', 'id', 'id_partie']:
+                    if key in partie and partie[key]:
+                        values['id_partie'] = partie[key]
+                        break
+                
+                # Nom et Prénom
+                for key in ['nomPrenomPartie', 'fullName', 'nom', 'name', 'nom_prenom']:
+                    if key in partie and partie[key]:
+                        values['nom_prenom'] = partie[key]
+                        break
+                
+                # Rôle
+                for key in ['rolePartie', 'role', 'qualite']:
+                    if key in partie and partie[key]:
+                        values['role'] = partie[key]
+                        break
+                
+                # Type de Personne
+                for key in ['codeTypePersonne', 'typePersonne', 'type', 'type_personne']:
+                    if key in partie and partie[key]:
+                        values['type_personne'] = partie[key]
+                        break
+                
+                # Compteurs (optionnels)
+                for key in ['countAvocatsPartie', 'count_avocats', 'avocats']:
+                    if key in partie:
+                        values['count_avocats'] = partie[key] or 0
+                        break
+                
+                for key in ['countMandatairesPartie', 'count_mandataires', 'mandataires']:
+                    if key in partie:
+                        values['count_mandataires'] = partie[key] or 0
+                        break
+                
+                for key in ['countHuissiersPartie', 'count_huissiers', 'huissiers']:
+                    if key in partie:
+                        values['count_huissiers'] = partie[key] or 0
+                        break
+                
+                for key in ['countRepresentantsPartie', 'count_representants', 'representants']:
+                    if key in partie:
+                        values['count_representants'] = partie[key] or 0
+                        break
+                
+                self.env['expertise.partie'].create(values)
+            
+            # Supprimer les décisions existantes
+            self.decisions_ids.unlink()
+            
+            # Créer les décisions et trouver la prochaine audience - Approche flexible
+            prochaine_audience = None
+            for decision in decisions_data:
+                values = {
+                    'dossier_id': self.id,
+                    'raw_data': decision,  # Sauvegarder TOUTES les données JSON
+                }
+                
+                # Extraction intelligente des champs
+                # ID Décision
+                for key in ['idDecision', 'id', 'id_decision']:
+                    if key in decision and decision[key]:
+                        values['id_decision'] = decision[key]
+                        break
+                
+                # Type de Décision
+                for key in ['typeDecision', 'type', 'finalite']:
+                    if key in decision and decision[key]:
+                        values['type_decision'] = decision[key]
+                        break
+                
+                # Contenu
+                for key in ['contenuDecision', 'contenu', 'content', 'description']:
+                    if key in decision and decision[key]:
+                        values['contenu_decision'] = decision[key]
+                        break
+                
+                # Numéro Jugement
+                for key in ['numeroJugement', 'numero', 'numero_jugement']:
+                    if key in decision and decision[key]:
+                        values['numero_jugement'] = str(decision[key])
+                        break
+                
+                # Dates - Support de plusieurs formats
+                date_decision = None
+                for key in ['dateTimeDecision', 'dateJugementString', 'date_decision', 'date']:
+                    date_str = decision.get(key, '')
+                    if date_str:
+                        try:
+                            # Essayer format datetime
+                            date_decision = datetime.strptime(date_str, "%d/%m/%Y %H:%M")
+                            values['date_time_decision'] = date_decision
+                            break
+                        except:
+                            try:
+                                # Essayer format date seule
+                                date_decision = datetime.strptime(date_str, "%d/%m/%Y")
+                                values['date_time_decision'] = date_decision
+                                break
+                            except:
+                                pass
+                
+                date_next_audience = None
+                for key in ['dateTimeNextAudience', 'dateProchaineAudienceString', 'prochaine_audience']:
+                    date_next_str = decision.get(key, '')
+                    if date_next_str:
+                        # Récupérer aussi l'heure si disponible
+                        heure = decision.get('heureProchaineAudience', '09:00')
+                        date_avec_heure = f"{date_next_str} {heure}"
+                        try:
+                            date_next_audience = datetime.strptime(date_avec_heure, "%d/%m/%Y %H:%M")
+                            values['date_time_next_audience'] = date_next_audience
+                            if not prochaine_audience or date_next_audience < prochaine_audience:
+                                prochaine_audience = date_next_audience
+                            break
+                        except:
+                            try:
+                                date_next_audience = datetime.strptime(date_next_str, "%d/%m/%Y")
+                                values['date_time_next_audience'] = date_next_audience
+                                if not prochaine_audience or date_next_audience < prochaine_audience:
+                                    prochaine_audience = date_next_audience
+                                break
+                            except:
+                                pass
+                
+                # Dates DE et NA (optionnelles)
+                for key in ['dateDe', 'date_de']:
+                    date_de_str = decision.get(key, '')
+                    if date_de_str:
+                        try:
+                            date_de = datetime.strptime(date_de_str, "%d/%m/%Y").date()
+                            values['date_de'] = date_de
+                            break
+                        except:
+                            pass
+                
+                for key in ['dateNA', 'date_na']:
+                    date_na_str = decision.get(key, '')
+                    if date_na_str:
+                        try:
+                            date_na = datetime.strptime(date_na_str, "%d/%m/%Y").date()
+                            values['date_na'] = date_na
+                            break
+                        except:
+                            pass
+                
+                self.env['expertise.decision'].create(values)
+            
+            if prochaine_audience:
+                self.date_prochaine_audience = prochaine_audience
+            
+            _logger.info(f"Champs du dossier {self.reference_dossier} remplis depuis les données JSON")
+            
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('✅ Succès'),
+                    'message': _('Les champs du dossier ont été remplis à partir des données JSON.'),
+                    'type': 'success',
+                    'sticky': False,
+                }
+            }
+            
+        except Exception as e:
+            error_msg = f"Erreur lors du remplissage des champs: {str(e)}"
+            _logger.error(error_msg)
+            raise UserError(_(error_msg))
+
+

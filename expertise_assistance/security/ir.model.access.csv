@@ -5,3 +5,5 @@ access_avocat,access_avocat,model_avocat,,1,1,1,1
 access_tribunal,access_tribunal,model_tribunal,,1,1,1,1
 access_ville,access_ville,model_ville,,1,1,1,1
 access_expertise_assistance,access_expertise_assistance,model_expertise_assistance,,1,1,1,1
+access_expertise_partie,access_expertise_partie,model_expertise_partie,,1,1,1,1
+access_expertise_decision,access_expertise_decision,model_expertise_decision,,1,1,1,1
